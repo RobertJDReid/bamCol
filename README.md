@@ -16,8 +16,8 @@ The output file can be used to track SNP outcomes along specific reads providing
 
 Installation:
 ```bash
-mamba create -n bamcol python=3.10 pysam -y
-mamba activate bamcol
+conda create -n bamcol python=3.10 pysam -y
+conda activate bamcol
 ```
 or
 ```bash
@@ -112,6 +112,20 @@ With `--cigar`, an extra `cigar` column appears:
 chrom,pos,read_id,call,is_del,is_refskip,base_qual,mapq,strand,cigar,flag
 S288C_chrI,2941,read_001,A,False,False,38,60,+,76M,99
 ```
+
+Installation can be tested by running `python make_example_data.py` which will make an example data folder
+containing a very small bam file and positions file.
+Run `python bam_col.py example/example.bam --pos-file example/positions.csv` which should give the following
+output:
+
+|chrom|pos|read_id|call|is_del|is_refskip|base_qual|mapq|strand|flag|
+|---------|-----|--------|--|--|--|--|--|--|--|
+|S288C_chrI|2958|read_001|A|0|0|40|60|+|99|
+|S288C_chrI|2958|read_002|C|0|0|39|59|-|147|
+|S288C_chrI|2958|read_003|G|0|0|41|58|-|83|
+|S288C_chrI|2965|read_001|A|0|0|40|60|+|99|
+|S288C_chrI|2965|read_002|C|0|0|39|59|-|147|
+|S288C_chrI|2965|read_003|G|0|0|41|58|-|83|
 
 ---
 
