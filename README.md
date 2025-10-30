@@ -1,3 +1,4 @@
+![sequenceRain](images/Align_rain.png)
 # bam_col.py
 
 **Extract per-read base calls at specific genomic positions from a BAM file using pysam.**
