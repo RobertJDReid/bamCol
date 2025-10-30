@@ -119,7 +119,7 @@ Run `python bam_col.py example/example.bam --pos-file example/positions.csv` whi
 output:
 
 |chrom|pos|read_id|call|is_del|is_refskip|base_qual|mapq|strand|flag|
-|---------|-----|--------|--|--|--|--|--|--|--|
+|---------|-----|--------|:--:|:--:|:--:|:--:|:--:|:--:|--:|
 |S288C_chrI|2958|read_001|A|0|0|40|60|+|99|
 |S288C_chrI|2958|read_002|C|0|0|39|59|-|147|
 |S288C_chrI|2958|read_003|G|0|0|41|58|-|83|

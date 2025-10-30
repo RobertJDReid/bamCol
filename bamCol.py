@@ -5,7 +5,7 @@ import sys
 from typing import Iterable, Tuple, List, Optional
 import pysam
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 def parse_pos_token(tok: str) -> Tuple[str, int]:
     """
