@@ -29,12 +29,12 @@ pip install pysam
 ## 🚀 Usage
 
 ```bash
-python bam_col.py <bamfile> [options]
+python bamCol.py <bamfile> [options]
 ```
 
 Example:
 ```bash
-python bam_col.py sample.bam --pos S288C_chrI:2941 --pos S288C_chrI:2947 --out alleles.csv
+python bamCol.py sample.bam --pos S288C_chrI:2941 --pos S288C_chrI:2947 --out alleles.csv
 ```
 
 ---
@@ -80,12 +80,12 @@ Each row in the output CSV represents a **read** overlapping a specified referen
 
 **Inspect base calls at a position:**
 ```bash
-python bam_col.py yeast.bam --pos S288C_chrIV:928598
+python bamCol.py yeast.bam --pos S288C_chrIV:928598
 ```
 
 **Include CIGAR strings:**
 ```bash
-python bam_col.py yeast.bam --pos-file positions.txt --cigar --out calls_with_cigar.csv
+python bamCol.py yeast.bam --pos-file positions.txt --cigar --out calls_with_cigar.csv
 ```
 
 **Input position file (`positions.csv`):**
@@ -115,7 +115,7 @@ S288C_chrI,2941,read_001,A,False,False,38,60,+,76M,99
 
 Installation can be tested by running `python make_example_data.py` which will make an example data folder
 containing a very small bam file and positions file.
-Run `python bam_col.py example/example.bam --pos-file example/positions.csv` which should give the following
+Run `python bamCol.py example_data/example.bam --pos-file example_data/positions.csv` which should give the following
 output:
 
 |chrom|pos|read_id|call|is_del|is_refskip|base_qual|mapq|strand|flag|
