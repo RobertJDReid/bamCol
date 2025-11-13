@@ -35,9 +35,15 @@ pip install pysam
 python bamCol.py <bamfile> [options]
 ```
 
-Example:
+Examples:
 ```bash
 python bamCol.py sample.bam --pos S288C_chrI:2941 --pos S288C_chrI:2947 --out alleles.csv
+```
+
+Works great with the multithreaded [pigz](https://zlib.net/pigz/) compression utility.
+
+```bash
+python bamCol.py sample.bam --pos-file SK1_SNPs.csv | pigz > zipped_output.csv.gz
 ```
 
 ---
@@ -137,6 +143,7 @@ output:
 
 - Requires an indexed BAM (`.bam.bai`).
 - For large datasets, adjust `--max-depth` to control performance and memory use.
+- For large outputs, pipe into a compression utility.
 
 ---
 
