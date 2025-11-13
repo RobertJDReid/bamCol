@@ -1,5 +1,8 @@
-![sequenceRain](images/Align_rain2.png)
 # bamCol.py
+
+_version 0.1.0_
+
+![sequenceRain](images/Align_rain2.png)
 
 **Extract per-read base calls at specific genomic positions from a BAM file using pysam.**
 
@@ -53,6 +56,7 @@ python bamCol.py sample.bam --pos S288C_chrI:2941 --pos S288C_chrI:2947 --out al
 | `--no-ignore-overlaps` | Count both mates if they overlap (default ignores overlaps to prevent double counting). |
 | `--ignore-orphans` | Ignore reads whose mate is not properly paired. |
 | `--cigar` | Include the read’s CIGAR string in the output. Omit to exclude the column. |
+| `--process n` | defines the number of system processes to use. Defaults to the total number of cores available from the OS. |
 
 ---
 

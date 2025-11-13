@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import os
 import sys
 from typing import Iterable, Tuple, List, Optional
 import pysam
+from multiprocessing import Pool
 
-__version__ = "0.0.2"
+__version__ = "0.1.0"
+
 
 def parse_pos_token(tok: str) -> Tuple[str, int]:
     """
@@ -18,6 +21,7 @@ def parse_pos_token(tok: str) -> Tuple[str, int]:
     if pos < 1:
         raise ValueError(f"Position must be 1-based positive integer, got: {pos}")
     return chrom, pos
+
 
 def read_positions(pos_args: List[str], pos_file: Optional[str]) -> List[Tuple[str, int]]:
     positions = []
@@ -40,6 +44,7 @@ def read_positions(pos_args: List[str], pos_file: Optional[str]) -> List[Tuple[s
     if not positions:
         raise ValueError("No positions provided. Use --pos and/or --pos-file.")
     return positions
+
 
 def pileup_one_position(
     bam: pysam.AlignmentFile,
@@ -130,6 +135,46 @@ def pileup_one_position(
 
             yield rec
 
+
+def worker_pileup(args) -> List[dict]:
+    """
+    Worker for a single position.
+
+    Opens its own AlignmentFile (needed for safe multiprocessing),
+    runs pileup_one_position, and returns a list of records.
+    """
+    (
+        bam_path,
+        chrom,
+        pos1,
+        min_mapq,
+        min_bq,
+        max_depth,
+        ignore_overlaps,
+        ignore_orphans,
+        want_cigar,
+    ) = args
+
+    records: List[dict] = []
+    bamf = pysam.AlignmentFile(bam_path, "rb")
+    try:
+        for rec in pileup_one_position(
+            bam=bamf,
+            chrom=chrom,
+            pos1=pos1,
+            min_mapq=min_mapq,
+            min_bq=min_bq,
+            max_depth=max_depth,
+            ignore_overlaps=ignore_overlaps,
+            ignore_orphans=ignore_orphans,
+            want_cigar=want_cigar,
+        ):
+            records.append(rec)
+    finally:
+        bamf.close()
+    return records
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Extract per-read allele calls at specific genome positions from a BAM using pysam."
@@ -171,24 +216,46 @@ def main():
         help="Include CIGAR string column in output.",
     )
     ap.add_argument(
-        "--version", 
-        action="version", 
-        version=f"%(prog)s {__version__}"
+        "--process",
+        type=int,
+        default=None,
+        help="Number of worker processes (default: use all available CPUs).",
+    )
+    ap.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
 
     args = ap.parse_args()
 
+    # Resolve positions
     positions = read_positions(args.pos, args.pos_file)
 
-    # Open BAM
+    # Verify BAM + index once in the main process
     try:
-        bamf = pysam.AlignmentFile(args.bam, "rb")
+        bam_test = pysam.AlignmentFile(args.bam, "rb")
     except Exception as e:
         ap.error(f"Failed to open BAM: {e}")
 
-    # Verify index exists early
-    if not bamf.has_index():
+    if not bam_test.has_index():
+        bam_test.close()
         ap.error("BAM index (.bai) not found or unreadable. Create with samtools index.")
+    bam_test.close()
+
+    # Determine number of processes
+    cpu_count = os.cpu_count() or 1
+    if args.process is None:
+        n_proc = cpu_count
+    else:
+        n_proc = args.process
+    if n_proc < 1:
+        ap.error(f"--process must be >= 1 (got {n_proc})")
+
+    print(
+        f"Using {n_proc} worker process(es) out of {cpu_count} available CPU(s).",
+        file=sys.stderr,
+    )
 
     # Prepare output
     out_fh = sys.stdout if args.out == "-" else open(args.out, "w", newline="")
@@ -213,28 +280,61 @@ def main():
     writer.writeheader()
 
     n_written = 0
+
     try:
-        with bamf:
-            for chrom, pos1 in positions:
-                for rec in pileup_one_position(
-                    bam=bamf,
-                    chrom=chrom,
-                    pos1=pos1,
-                    min_mapq=args.min_mapq,
-                    min_bq=args.min_bq,
-                    max_depth=args.max_depth,
-                    ignore_overlaps=args.ignore_overlaps,
-                    ignore_orphans=args.ignore_orphans,
-                    want_cigar=args.cigar,
-                ):
-                    writer.writerow(rec)
-                    n_written += 1
+        # Single-process path: behave like the original code
+        if n_proc == 1:
+            bamf = pysam.AlignmentFile(args.bam, "rb")
+            try:
+                for chrom, pos1 in positions:
+                    for rec in pileup_one_position(
+                        bam=bamf,
+                        chrom=chrom,
+                        pos1=pos1,
+                        min_mapq=args.min_mapq,
+                        min_bq=args.min_bq,
+                        max_depth=args.max_depth,
+                        ignore_overlaps=args.ignore_overlaps,
+                        ignore_orphans=args.ignore_orphans,
+                        want_cigar=args.cigar,
+                    ):
+                        writer.writerow(rec)
+                        n_written += 1
+            finally:
+                bamf.close()
+
+        # Multi-process path
+        else:
+            # Build task list: one job per position
+            task_args = [
+                (
+                    args.bam,
+                    chrom,
+                    pos1,
+                    args.min_mapq,
+                    args.min_bq,
+                    args.max_depth,
+                    args.ignore_overlaps,
+                    args.ignore_orphans,
+                    args.cigar,
+                )
+                for chrom, pos1 in positions
+            ]
+
+            # Use imap to preserve order of positions in output
+            with Pool(processes=n_proc) as pool:
+                for records in pool.imap(worker_pileup, task_args):
+                    for rec in records:
+                        writer.writerow(rec)
+                        n_written += 1
+
     finally:
         if out_fh is not sys.stdout:
             out_fh.close()
 
-    # Optional: print a tiny summary to stderr
+    # Tiny summary to stderr
     print(f"Wrote {n_written} records", file=sys.stderr)
+
 
 if __name__ == "__main__":
     main()
