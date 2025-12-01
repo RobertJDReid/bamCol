@@ -20,11 +20,21 @@ The output file can be used to track SNP outcomes along specific reads providing
 - [pysam](https://pysam.readthedocs.io/en/latest/)
 
 Installation:
+
+First, make a Python environment with pysam
+
 ```bash
 conda create -n bamcol python=3.10 pysam -y
 conda activate bamcol
 ```
-or
+
+Then `git clone repo`
+
+subsitute the copied repository link for 'repo' in the command above
+
+If pysam fails to install while creating an environment, you can activate the environment
+and
+
 ```bash
 pip install pysam
 ```
