@@ -6,9 +6,11 @@ _version 0.1.0_
 
 **Extract per-read base calls at specific genomic positions from a BAM file using pysam.**
 
-This script produces a CSV table listing the reads at the given positions in a reference genome, along with base calls, mapping quality, strand, and other information.
-It is useful for inspecting allele composition, verifying variant calls, or extracting read-level evidence at specific coordinates.
-The output file can be used to track SNP outcomes along specific reads providing evidence for strand exchanges.
+Given a chromosomal position or positions, the script extracts base calls from a bam file of mapped sequence reads.
+Output is a CSV table listing the read IDs, base calls, mapping quality, strand, and other information.
+A positions list is automatically divided among available processor cores for parallel processing.
+bamCol is useful for inspecting allele composition, verifying variant calls, or extracting read-level evidence at specific coordinates.
+The output file can be used to track SNP outcomes along specific reads providing evidence for strand exchanges or other chromosomal alterations.
 
 ---
 
