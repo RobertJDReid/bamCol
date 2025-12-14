@@ -56,6 +56,7 @@ def pileup_one_position(
     ignore_overlaps: bool,
     ignore_orphans: bool,
     want_cigar: bool,
+    show_read_pos: bool,
 ) -> Iterable[dict]:
     """
     Yield per-read records at a single 1-based reference position.
@@ -130,6 +131,9 @@ def pileup_one_position(
                 "flag": aln.flag,
             }
 
+            if show_read_pos:
+                rec["read_pos"] = qpos if qpos is not None else ""
+
             if want_cigar:
                 rec["cigar"] = aln.cigarstring
 
@@ -153,6 +157,7 @@ def worker_pileup(args) -> List[dict]:
         ignore_overlaps,
         ignore_orphans,
         want_cigar,
+        show_read_pos,
     ) = args
 
     records: List[dict] = []
@@ -168,6 +173,7 @@ def worker_pileup(args) -> List[dict]:
             ignore_overlaps=ignore_overlaps,
             ignore_orphans=ignore_orphans,
             want_cigar=want_cigar,
+            show_read_pos=show_read_pos,
         ):
             records.append(rec)
     finally:
@@ -214,6 +220,11 @@ def main():
         "--cigar",
         action="store_true",
         help="Include CIGAR string column in output.",
+    )
+    ap.add_argument(
+        "--show-read-pos",
+        action="store_true",
+        help="Include 0-based read position (query_position) for each pileup base in output.",
     )
     ap.add_argument(
         "--process",
@@ -276,6 +287,9 @@ def main():
     if args.cigar:
         fieldnames.insert(fieldnames.index("flag"), "cigar")
 
+    if args.show_read_pos:
+        fieldnames.insert(fieldnames.index("call"), "read_pos")
+
     writer = csv.DictWriter(out_fh, fieldnames=fieldnames)
     writer.writeheader()
 
@@ -297,6 +311,7 @@ def main():
                         ignore_overlaps=args.ignore_overlaps,
                         ignore_orphans=args.ignore_orphans,
                         want_cigar=args.cigar,
+                        show_read_pos=args.show_read_pos,
                     ):
                         writer.writerow(rec)
                         n_written += 1
@@ -317,6 +332,7 @@ def main():
                     args.ignore_overlaps,
                     args.ignore_orphans,
                     args.cigar,
+                    args.show_read_pos,
                 )
                 for chrom, pos1 in positions
             ]
