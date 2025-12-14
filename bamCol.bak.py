@@ -55,8 +55,6 @@ def pileup_one_position(
     max_depth: int,
     ignore_overlaps: bool,
     ignore_orphans: bool,
-    include_secondary: bool,
-    include_supplementary: bool,
     want_cigar: bool,
     show_read_pos: bool,
 ) -> Iterable[dict]:
@@ -89,10 +87,8 @@ def pileup_one_position(
         for pr in col.pileups:
             aln = pr.alignment
 
-            # Skip secondary/supplementary alignments unless requested
-            if aln.is_secondary and not include_secondary:
-                continue
-            if aln.is_supplementary and not include_supplementary:
+            # Skip secondary/supplementary/unmapped by default (pysam pileup already skips unmapped).
+            if aln.is_secondary or aln.is_supplementary:
                 continue
             if aln.mapping_quality < min_mapq:
                 continue
@@ -160,8 +156,6 @@ def worker_pileup(args) -> List[dict]:
         max_depth,
         ignore_overlaps,
         ignore_orphans,
-        include_secondary,
-        include_supplementary,
         want_cigar,
         show_read_pos,
     ) = args
@@ -178,8 +172,6 @@ def worker_pileup(args) -> List[dict]:
             max_depth=max_depth,
             ignore_overlaps=ignore_overlaps,
             ignore_orphans=ignore_orphans,
-            include_secondary=include_secondary,
-            include_supplementary=include_supplementary,
             want_cigar=want_cigar,
             show_read_pos=show_read_pos,
         ):
@@ -223,16 +215,6 @@ def main():
         "--ignore-orphans",
         action="store_true",
         help="Ignore orphan reads (mates not properly paired).",
-    )
-    ap.add_argument(
-        "--include-secondary",
-        action="store_true",
-        help="Include secondary alignments (FLAG 0x100) in pileup output.",
-    )
-    ap.add_argument(
-        "--include-supplementary",
-        action="store_true",
-        help="Include supplementary alignments (FLAG 0x800) in pileup output.",
     )
     ap.add_argument(
         "--cigar",
@@ -328,8 +310,6 @@ def main():
                         max_depth=args.max_depth,
                         ignore_overlaps=args.ignore_overlaps,
                         ignore_orphans=args.ignore_orphans,
-                        include_secondary=args.include_secondary,
-                        include_supplementary=args.include_supplementary,
                         want_cigar=args.cigar,
                         show_read_pos=args.show_read_pos,
                     ):
@@ -351,8 +331,6 @@ def main():
                     args.max_depth,
                     args.ignore_overlaps,
                     args.ignore_orphans,
-                    args.include_secondary,
-                    args.include_supplementary,
                     args.cigar,
                     args.show_read_pos,
                 )
