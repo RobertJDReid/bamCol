@@ -1,6 +1,6 @@
 # bamCol.py
 
-_version 0.1.0_
+_version 0.2.1_
 
 ![sequenceRain](images/Align_rain2.png)
 
@@ -9,8 +9,12 @@ _version 0.1.0_
 Given a chromosomal position or positions, the script extracts base calls from a bam file of mapped sequence reads.
 Output is a CSV table listing the read IDs, base calls, mapping quality, strand, and other information.
 A positions list is automatically divided among available processor cores for parallel processing.
-bamCol is useful for inspecting allele composition, verifying variant calls, or extracting read-level evidence at specific coordinates.
-The output file can be used to track SNP outcomes along specific reads providing evidence for strand exchanges or other chromosomal alterations.
+`bamCol` is useful for inspecting allele composition, verifying variant calls, or extracting read-level
+evidence at specific coordinates.
+The output file can be used to track SNP outcomes along specific reads providing evidence for strand exchanges
+or other chromosomal alterations.
+By default, only primary alignment reads are returned.
+Options are available to include secondary and supplemental read information.
 
 ---
 
@@ -75,6 +79,8 @@ python bamCol.py sample.bam --pos-file SK1_SNPs.csv | pigz > zipped_output.csv.g
 | `--ignore-orphans` | Ignore reads whose mate is not properly paired. |
 | `--cigar` | Include the read’s CIGAR string in the output. Omit to exclude the column. |
 | `--process n` | defines the number of system processes to use. Defaults to the total number of cores available from the OS. |
+| `--include-secondary` | includes information from secondary alignments. |
+| `--include-supplementary` | includes information from supplementary alignments. |
 
 ---
 
@@ -87,6 +93,7 @@ Each row in the output CSV represents a **read** overlapping a specified referen
 | `chrom` | Chromosome / reference name. |
 | `pos` | 1-based reference position. |
 | `read_id` | Read name (query name). |
+| `read_pos` | Read name (query name). |
 | `call` | Base observed at that position (`A`, `T`, `G`, `C`, `DEL`, `REFSKIP`). |
 | `is_del` | `True` if the read has a deletion at this position. |
 | `is_refskip` | `True` if the read skips this reference position (e.g., spliced RNA-seq read). |
@@ -135,10 +142,17 @@ chrom,pos,read_id,call,is_del,is_refskip,base_qual,mapq,strand,cigar,flag
 S288C_chrI,2941,read_001,A,False,False,38,60,+,76M,99
 ```
 
-Installation can be tested by running `python make_example_data.py` which will make an example data folder
+Installation can be tested by running:
+
+```python make_example_data.py```
+
+This script makes an example data folder
 containing a very small bam file and positions file.
-Run `python bamCol.py example_data/example.bam --pos-file example_data/positions.csv` which should give the following
-output:
+Then run:
+
+```python bamCol.py example_data/example.bam --pos-file example_data/positions.csv```
+
+Test output will be the following:
 
 |chrom|pos|read_id|call|is_del|is_refskip|base_qual|mapq|strand|flag|
 |---------|-----|--------|:--:|:--:|:--:|:--:|:--:|:--:|--:|
@@ -155,7 +169,7 @@ output:
 
 - Requires an indexed BAM (`.bam.bai`).
 - For large datasets, adjust `--max-depth` to control performance and memory use.
-- For large outputs, pipe into a compression utility.
+- For large outputs, pipe into a compression utility such as `gzip` or `pigz`.
 
 ---
 
