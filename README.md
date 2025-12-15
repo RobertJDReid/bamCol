@@ -93,7 +93,7 @@ Each row in the output CSV represents a **read** overlapping a specified referen
 | `chrom` | Chromosome / reference name. |
 | `pos` | 1-based reference position. |
 | `read_id` | Read name (query name). |
-| `read_pos` | Read name (query name). |
+| `read_pos` | Position on read aligned with current reference nucleotide |
 | `call` | Base observed at that position (`A`, `T`, `G`, `C`, `DEL`, `REFSKIP`). |
 | `is_del` | `True` if the read has a deletion at this position. |
 | `is_refskip` | `True` if the read skips this reference position (e.g., spliced RNA-seq read). |
