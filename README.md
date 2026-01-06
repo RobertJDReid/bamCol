@@ -173,6 +173,58 @@ Test output will be the following:
 
 ---
 
+### 🔎 VCF SNP Pre-filtering Helper
+
+This repository includes an auxiliary R script for **pre-filtering SNPs from bcftools-generated VCF files** prior to downstream read-level analysis with `bamCol`. The script applies a set of stringent, reproducible filters to identify **high-confidence SNP positions**, optionally exporting both a filtered VCF and a simple CHROM/POS coordinate list.
+
+Specifically, the script:
+
+* retains **biallelic SNPs only** (excludes indels and multi-allelic sites),
+* enforces a **minimum QUAL threshold**,
+* filters by **site depth relative to the median INFO/DP**,
+* selects sites with **AC = 2** (homozygous ALT in single-sample bcftools VCFs),
+* optionally excludes specified chromosomes (e.g. mitochondrial DNA).
+
+The resulting coordinate CSV can be used as input to `bamCol`, enabling efficient extraction of per-read allele information at robust, fixed SNP sites.
+
+---
+
+### 🔁 Typical Workflow to make a SNP position file
+
+A common use case is to identify high-confidence SNP markers from a bcftools VCF and then extract per-read allele calls at those positions using `bamCol`:
+
+```bash
+# 0) Map diverged parent strain reads to the reference parent
+
+minimap2 -ax asm5 ref_genome.fasta diverged_genome_reads.fastq.gz \
+  | samtools view -b -q 50 \
+  | samtools sort \
+  > sample.bam
+
+samtools index sample.bam
+
+# 1) Call variants with bcftools (example)
+bcftools mpileup -Ou -f reference_genome.fa sample.bam \
+  | bcftools call -mv -Oz -o sample.vcf.gz
+bcftools index sample.vcf.gz
+
+# 2) Filter to high-confidence SNP positions
+Rscript vcf_filt.R --vcf_file sample.vcf.gz --csv_only
+
+# 3) Extract per-read base calls at filtered SNP sites
+python bamCol.py sample.bam \
+  --pos-file sample_filtered.csv \
+  --out allele_calls.csv
+```
+
+Note that the `vcf_filt.R` script requires the following packages available on [CRAN](https://cran.r-project.org/)
+
+- tidyverse
+- vcfR
+- optparse
+
+---
+
 ## 🪪 License
 
 MIT License © 2025 Robert J. D. Reid  

@@ -1,0 +1,30 @@
+To do list for bamCol
+
+- use vcf file for input
+	- establish SNP filters
+
+- take output file and produce graphs similar to R graphs
+
+
+__Input options:__
+_current_
+—pos (chromosome and nucleotide position)
+multiple —pos switches can be added when calling
+
+—pos-file currently csv file of chromosome and position
+want to make it accept other delimiters
+
+_new options_
+—vcf-file vcf file with SNPS and a default filtering protocol 
+add modifications to change filtering
+
+—include-region regions on reference to display data
+—include-region-file get regions from file
+—exclude-region as above but ignore this region on reference
+
+__Visualizations:__
+_current_
+R markdown that I will put up on GitHub
+
+_new_
+convert R markdown into standalone python script to draw graphs
