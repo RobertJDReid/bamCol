@@ -4,6 +4,8 @@ import csv
 import sys
 from typing import Iterable, Tuple, List, Optional
 import pysam
+##
+import re
 
 def parse_pos_token(tok: str) -> Tuple[str, int]:
     """
@@ -123,6 +125,187 @@ def pileup_one_position(
                 "flag": aln.flag,
             }
 
+
+##
+_REGION_RE = re.compile(r"^([^:]+):(\d+)(?:-|\.\.)(\d+)$")
+
+
+def parse_region_token(token: str) -> tuple[str, int, int]:
+    """
+    Parse 'CHR:START-END' or 'CHR:START..END' into (chrom, start, end), inclusive, 1-based.
+    """
+    t = token.strip().replace("..", "-")
+    m = _REGION_RE.match(t)
+    if not m:
+        raise ValueError(f"Bad region '{token}'. Expected CHR:START-END")
+    chrom = m.group(1)
+    start = int(m.group(2))
+    end = int(m.group(3))
+    if start > end:
+        start, end = end, start
+    return chrom, start, end
+
+
+def read_region_file(path: str) -> list[tuple[str, int, int]]:
+    """
+    Reads regions from a TSV/CSV/whitespace-like file with columns: chrom start end (1-based, inclusive).
+    Header allowed; lines beginning with # are ignored.
+    Delimiter is auto-handled in a simple way:
+      - if line contains '\t' -> split by tab
+      - elif contains ',' -> split by comma
+      - else -> split by whitespace
+    """
+    regions: list[tuple[str, int, int]] = []
+    with open(path, "r", encoding="utf-8") as f:
+        for ln in f:
+            s = ln.strip()
+            if not s or s.startswith("#"):
+                continue
+
+            # skip header-ish lines
+            low = s.lower()
+            if "chrom" in low and ("start" in low or "pos" in low) and "end" in low:
+                continue
+
+            if "\t" in s:
+                parts = s.split("\t")
+            elif "," in s:
+                parts = s.split(",")
+            else:
+                parts = re.split(r"\s+", s)
+
+            if len(parts) < 3:
+                continue
+
+            chrom = parts[0].strip()
+            start = int(parts[1])
+            end = int(parts[2])
+            if start > end:
+                start, end = end, start
+            regions.append((chrom, start, end))
+
+    return regions
+
+
+def in_regions(chrom: str, pos: int, regions: list[tuple[str, int, int]]) -> bool:
+    """
+    True if (chrom,pos) falls within ANY region in regions.
+    """
+    for rchrom, start, end in regions:
+        if chrom == rchrom and start <= pos <= end:
+            return True
+    return False
+
+
+def read_vcf_positions(vcf_path: str) -> list[tuple[str, int]]:
+    """
+    Minimal default protocol:
+      - use only biallelic SNPs
+      - require FILTER=PASS (or empty filter)  [common VCF convention]
+    Returns (contig, pos) where pos is 1-based (VCF standard).
+    """
+    vcf = pysam.VariantFile(vcf_path)
+    positions: list[tuple[str, int]] = []
+
+    # If not indexed, fetch() may fail; iterate directly.
+    try:
+        it = vcf.fetch()
+    except Exception:
+        it = vcf
+
+    for rec in it:
+        # PASS-only (handle writers that represent PASS as empty filter)
+        fkeys = set(rec.filter.keys())
+        if fkeys and "PASS" not in fkeys:
+            continue
+
+        # biallelic SNPs only
+        if rec.alts is None or len(rec.alts) != 1:
+            continue
+        if len(rec.ref) != 1 or len(rec.alts[0]) != 1:
+            continue
+
+        positions.append((rec.contig, int(rec.pos)))
+
+    return positions
+
+
+def collect_positions_with_regions(args) -> list[tuple[str, int]]:
+    """
+    Combine --pos, --pos-file, and --vcf-file into a single position list.
+    Then apply include/exclude region gates.
+    """
+    positions: list[tuple[str, int]] = []
+
+    # existing --pos
+    for token in args.pos:
+        chrom, pos = token.split(":", 1)
+        positions.append((chrom, int(pos)))
+
+    # existing --pos-file (keep using your current implementation if you already have one)
+    if args.pos_file:
+        # If you already have a function for this, call it instead.
+        # This is a minimal inline reader similar to region-file handling.
+        with open(args.pos_file, "r", encoding="utf-8") as f:
+            for ln in f:
+                s = ln.strip()
+                if not s or s.startswith("#"):
+                    continue
+                low = s.lower()
+                if "chrom" in low and ("pos" in low or "position" in low):
+                    continue
+
+                if "\t" in s:
+                    parts = s.split("\t")
+                elif "," in s:
+                    parts = s.split(",")
+                else:
+                    parts = re.split(r"\s+", s)
+
+                if len(parts) < 2:
+                    continue
+                chrom = parts[0].strip()
+                pos = int(parts[1])
+                positions.append((chrom, pos))
+
+    # NEW --vcf-file
+    if args.vcf_file:
+        positions.extend(read_vcf_positions(args.vcf_file))
+
+    if not positions:
+        raise SystemExit("No positions provided. Use --pos / --pos-file / --vcf-file.")
+
+    # NEW include/exclude regions
+    include_regions: list[tuple[str, int, int]] = []
+    exclude_regions: list[tuple[str, int, int]] = []
+
+    # --include-region (repeatable)
+    for token in args.include_region:
+        include_regions.append(parse_region_token(token))
+
+    # --include-region-file
+    if args.include_region_file:
+        include_regions.extend(read_region_file(args.include_region_file))
+
+    # --exclude-region (repeatable)
+    for token in args.exclude_region:
+        exclude_regions.append(parse_region_token(token))
+
+    # Apply gating:
+    # 1) if include_regions provided, keep only positions inside them
+    # 2) always drop positions inside exclude_regions
+    filtered: list[tuple[str, int]] = []
+    for chrom, pos in positions:
+        if include_regions and not in_regions(chrom, pos, include_regions):
+            continue
+        if exclude_regions and in_regions(chrom, pos, exclude_regions):
+            continue
+        filtered.append((chrom, pos))
+
+    # de-duplicate + stable order
+    filtered = sorted(set(filtered), key=lambda x: (x[0], x[1]))
+    return filtered
+
 def main():
     ap = argparse.ArgumentParser(
         description="Extract per-read allele calls at specific genome positions from a BAM using pysam."
@@ -158,9 +341,39 @@ def main():
         action="store_true",
         help="Ignore orphan reads (mates not properly paired).",
     )
+    ##
+    ap.add_argument(
+        "--vcf-file",
+        default=None,
+        help="Input VCF file. SNP positions will be used as query sites (VCF POS is 1-based).",
+    )
+    ap.add_argument(
+        "--include-region",
+        action="append",
+        default=[],
+        metavar="CHR:START-END",
+        help="Include only positions within region (repeatable). Format: CHR:START-END (1-based, inclusive).",
+    )
+    ap.add_argument(
+        "--include-region-file",
+        default=None,
+        help="File of regions with columns: chrom start end (1-based, inclusive). Header and #comments allowed.",
+    )
+    ap.add_argument(
+        "--exclude-region",
+        action="append",
+        default=[],
+        metavar="CHR:START-END",
+        help="Exclude positions within region (repeatable). Format: CHR:START-END (1-based, inclusive).",
+    )
+
+
     args = ap.parse_args()
 
-    positions = read_positions(args.pos, args.pos_file)
+    ##
+    #positions = read_positions(args.pos, args.pos_file)
+    positions = collect_positions_with_regions(args)
+
 
     # Open BAM
     try:
