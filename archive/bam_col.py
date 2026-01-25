@@ -63,7 +63,7 @@ def pileup_one_position(
             truncate=True,
             stepper="samtools",
             min_mapping_quality=min_mapq,
-            min_base_quality=0,  # we’ll filter per-base below so we can still report low-BQ if desired
+            min_base_quality=0,  # weâ€™ll filter per-base below so we can still report low-BQ if desired
             max_depth=max_depth,
             ignore_overlaps=ignore_overlaps,
             ignore_orphans=ignore_orphans,
@@ -199,35 +199,79 @@ def in_regions(chrom: str, pos: int, regions: list[tuple[str, int, int]]) -> boo
 
 def read_vcf_positions(vcf_path: str) -> list[tuple[str, int]]:
     """
+    Read positions from VCF file (handles .vcf, .vcf.gz with bgzip or regular gzip).
     Minimal default protocol:
       - use only biallelic SNPs
       - require FILTER=PASS (or empty filter)  [common VCF convention]
     Returns (contig, pos) where pos is 1-based (VCF standard).
     """
-    vcf = pysam.VariantFile(vcf_path)
-    positions: list[tuple[str, int]] = []
-
-    # If not indexed, fetch() may fail; iterate directly.
+    import gzip
+    
+    # Try pysam first (works with bgzip and uncompressed VCF)
     try:
-        it = vcf.fetch()
-    except Exception:
-        it = vcf
+        vcf = pysam.VariantFile(vcf_path)
+        positions: list[tuple[str, int]] = []
 
-    for rec in it:
-        # PASS-only (handle writers that represent PASS as empty filter)
-        fkeys = set(rec.filter.keys())
-        if fkeys and "PASS" not in fkeys:
-            continue
+        # If not indexed, fetch() may fail; iterate directly.
+        try:
+            it = vcf.fetch()
+        except Exception:
+            it = vcf
 
-        # biallelic SNPs only
-        if rec.alts is None or len(rec.alts) != 1:
-            continue
-        if len(rec.ref) != 1 or len(rec.alts[0]) != 1:
-            continue
+        for rec in it:
+            # PASS-only (handle writers that represent PASS as empty filter)
+            fkeys = set(rec.filter.keys())
+            if fkeys and "PASS" not in fkeys:
+                continue
 
-        positions.append((rec.contig, int(rec.pos)))
+            # biallelic SNPs only
+            if rec.alts is None or len(rec.alts) != 1:
+                continue
+            if len(rec.ref) != 1 or len(rec.alts[0]) != 1:
+                continue
 
-    return positions
+            positions.append((rec.contig, int(rec.pos)))
+
+        vcf.close()
+        return positions
+        
+    except Exception as pysam_error:
+        # Fall back to manual parsing for regular gzip files
+        # (pysam fails on regular gzip, only works with bgzip)
+        if not vcf_path.endswith('.gz'):
+            # If it's not gzipped and pysam failed, re-raise the original error
+            raise pysam_error
+            
+        positions: list[tuple[str, int]] = []
+        with gzip.open(vcf_path, 'rt') as f:
+            for line in f:
+                # Skip header lines
+                if line.startswith('#'):
+                    continue
+                    
+                parts = line.strip().split('\t')
+                if len(parts) < 7:
+                    continue
+                    
+                chrom = parts[0]
+                pos = int(parts[1])
+                ref = parts[3]
+                alt = parts[4]
+                filt = parts[6]
+                
+                # PASS filter only (VCF uses '.' for missing filter, treat as PASS)
+                if filt != 'PASS' and filt != '.':
+                    continue
+                    
+                # Biallelic SNPs only (skip if multiple alts separated by comma)
+                if ',' in alt:
+                    continue
+                if len(ref) != 1 or len(alt) != 1:
+                    continue
+                    
+                positions.append((chrom, pos))
+        
+        return positions
 
 
 def collect_positions_with_regions(args) -> list[tuple[str, int]]:
