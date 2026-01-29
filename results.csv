@@ -1,0 +1,10 @@
+chrom,pos,read_id,read_pos,call,is_del,is_refskip,base_qual,mapq,strand,flag
+S288C_chrI,1000,read_001,19,A,0,0,40,60,+,99
+S288C_chrI,1500,read_002,19,C,0,0,39,59,-,147
+S288C_chrI,2000,read_003,19,G,0,0,41,58,-,83
+S288C_chrI,2958,read_004,17,T,0,0,40,60,+,99
+S288C_chrI,2958,read_005,7,A,0,0,40,60,-,147
+S288C_chrI,2965,read_004,24,T,0,0,40,60,+,99
+S288C_chrI,2965,read_005,14,A,0,0,40,60,-,147
+S288C_chrII,1000,read_006,19,C,0,0,40,60,+,99
+S288C_chrII,2000,read_007,19,G,0,0,40,60,-,147

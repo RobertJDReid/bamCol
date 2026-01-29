@@ -1,0 +1,19 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##FILTER=<ID=LowQual,Description="Low quality variant">
+##contig=<ID=S288C_chrI,length=10000>
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE1
+S288C_chrI	1000	.	A	G	30	PASS	DP=50	GT	0/1
+S288C_chrI	abc	.	C	T	30	PASS	DP=50	GT	0/1
+S288C_chrI	1500	.	C	T	30	PASS	DP=50	GT	0/1
+S288C_chrI	0	.	G	A	30	PASS	DP=50	GT	0/1
+S288C_chrI	-100	.	T	C	30	PASS	DP=50	GT	0/1
+S288C_chrI	2000	.	A	G	10	LowQual	DP=5	GT	0/1
+S288C_chrI	2100	.	AT	CG	30	PASS	DP=50	GT	0/1
+S288C_chrI	2200	.	A	G,T	30	PASS	DP=50	GT	0/1
+S288C_chrI	2300	.	A		30	PASS	DP=50	GT	0/1
+S288C_chrI
+S288C_chrI	2958	.	A	G	30	PASS	DP=50	GT	0/1
+S288C_chrI	2965	.	C	T	30	PASS	DP=50	GT	0/1
