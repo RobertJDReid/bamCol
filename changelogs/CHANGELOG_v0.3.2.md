@@ -310,6 +310,8 @@ python bamCol_v0.3.2.py test.bam \
 
 ---
 
+## Updated example data for testing installation
+
 ## Upgrade Recommendation
 
 **Recommended for all users.**
