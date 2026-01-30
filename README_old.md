@@ -23,141 +23,24 @@ Options are available to include secondary and supplemental read information.
 - Python 3.8+
 - [pysam](https://pysam.readthedocs.io/en/latest/)
 
----
+Installation:
 
-## 📦 Installation
-
-### Option 1: Conda Environment (Recommended)
-
-First, make a Python environment with pysam:
+First, make a Python environment with pysam
 
 ```bash
 conda create -n bamcol python=3.10 pysam -y
 conda activate bamcol
 ```
 
-Then clone the repository:
+Then `git clone repo`
 
-```bash
-git clone <repository-url>
-cd bamCol
-```
+substitute the copied repository link for 'repo' in the command above
 
-If pysam fails to install while creating an environment, you can activate the environment and:
+If pysam fails to install while creating an environment, you can activate the environment
+and
 
 ```bash
 pip install pysam
-```
-
-### Option 2: Docker Container
-
-Docker provides an isolated, reproducible environment without needing to manage Python dependencies.
-
-#### Building the Docker Image
-
-From the repository directory containing the `Dockerfile`:
-
-```bash
-docker build -t bamcol:0.3.2 .
-```
-
-#### Running bamCol from Docker
-
-**Basic usage with Docker:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --pos chr1:1000 --out /data/results.csv
-```
-
-**Using a position file:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --pos-file /data/positions.txt --out /data/results.csv
-```
-
-**Using a VCF file:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --vcf-file /data/variants.vcf.gz --out /data/results.csv
-```
-
-**With region filtering:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam \
-    --vcf-file /data/variants.vcf.gz \
-    --exclude-region chr1:1000-2000 \
-    --out /data/results.csv
-```
-
-**Using multiprocessing:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam \
-    --vcf-file /data/variants.vcf.gz \
-    --process 4 \
-    --out /data/results.csv
-```
-
-**Output to stdout (pipe to file or another tool):**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --pos chr1:1000 > results.csv
-```
-
-**Docker volume mounting notes:**
-- `-v /path/to/data:/data` mounts your local directory to `/data` in the container
-- BAM files, position files, VCF files, and output files must all be in the mounted directory
-- Use `/data/` prefix for all file paths inside the container
-
-#### Example Dockerfile
-
-Create a `Dockerfile` in your repository:
-
-```dockerfile
-FROM python:3.10-slim
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libbz2-dev \
-    liblzma-dev \
-    zlib1g-dev \
-    libcurl4-openssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install pysam
-RUN pip install --no-cache-dir pysam
-
-# Copy the script
-WORKDIR /app
-COPY bamCol.py /app/
-
-# Set the entrypoint
-ENTRYPOINT ["python", "/app/bamCol.py"]
-```
-
-#### Docker Tips
-
-**Create an alias for easier usage:**
-```bash
-# Add to your ~/.bashrc or ~/.zshrc
-alias bamcol='docker run --rm -v $(pwd):/data bamcol:0.3.2'
-
-# Then use like a normal command
-bamcol /data/sample.bam --pos chr1:1000 --out /data/results.csv
-```
-
-**Testing the Docker installation:**
-```bash
-# First, create example data (mount current directory)
-docker run --rm -v $(pwd):/data -w /data python:3.10-slim \
-    bash -c "pip install pysam && python /data/make_example_data.py"
-
-# Then test bamCol
-docker run --rm -v $(pwd):/data bamcol:0.3.2 \
-    /data/example_data/example.bam \
-    --pos-file /data/example_data/positions.txt
 ```
 
 ---
