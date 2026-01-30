@@ -61,58 +61,9 @@ From the repository directory containing the `Dockerfile`:
 docker build -t bamcol:0.3.2 .
 ```
 
-#### Running bamCol from Docker
-
-**Basic usage with Docker:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --pos chr1:1000 --out /data/results.csv
-```
-
-**Using a position file:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --pos-file /data/positions.txt --out /data/results.csv
-```
-
-**Using a VCF file:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --vcf-file /data/variants.vcf.gz --out /data/results.csv
-```
-
-**With region filtering:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam \
-    --vcf-file /data/variants.vcf.gz \
-    --exclude-region chr1:1000-2000 \
-    --out /data/results.csv
-```
-
-**Using multiprocessing:**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam \
-    --vcf-file /data/variants.vcf.gz \
-    --process 4 \
-    --out /data/results.csv
-```
-
-**Output to stdout (pipe to file or another tool):**
-```bash
-docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
-    /data/sample.bam --pos chr1:1000 > results.csv
-```
-
-**Docker volume mounting notes:**
-- `-v /path/to/data:/data` mounts your local directory to `/data` in the container
-- BAM files, position files, VCF files, and output files must all be in the mounted directory
-- Use `/data/` prefix for all file paths inside the container
-
 #### Example Dockerfile
 
-Create a `Dockerfile` in your repository:
+The repository includes a `Dockerfile`. For reference, it looks like this:
 
 ```dockerfile
 FROM python:3.10-slim
@@ -164,20 +115,73 @@ docker run --rm -v $(pwd):/data bamcol:0.3.2 \
 
 ## 🚀 Usage
 
+### Direct Python Usage
+
 ```bash
 python bamCol.py <bamfile> [options]
 ```
 
-Examples:
+**Examples:**
 ```bash
 python bamCol.py sample.bam --pos S288C_chrI:2941 --pos S288C_chrI:2947 --out alleles.csv
 ```
 
-Works great with the multithreaded [pigz](https://zlib.net/pigz/) compression utility.
+Works great with the multithreaded [pigz](https://zlib.net/pigz/) compression utility:
 
 ```bash
 python bamCol.py sample.bam --pos-file SK1_SNPs.csv | pigz > zipped_output.csv.gz
 ```
+
+### Docker Usage
+
+When using Docker, you need to mount your data directory and use paths relative to the mount point.
+
+**Basic usage with Docker:**
+```bash
+docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
+    /data/sample.bam --pos chr1:1000 --out /data/results.csv
+```
+
+**Using a position file:**
+```bash
+docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
+    /data/sample.bam --pos-file /data/positions.txt --out /data/results.csv
+```
+
+**Using a VCF file:**
+```bash
+docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
+    /data/sample.bam --vcf-file /data/variants.vcf.gz --out /data/results.csv
+```
+
+**With region filtering:**
+```bash
+docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
+    /data/sample.bam \
+    --vcf-file /data/variants.vcf.gz \
+    --exclude-region chr1:1000-2000 \
+    --out /data/results.csv
+```
+
+**Using multiprocessing:**
+```bash
+docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
+    /data/sample.bam \
+    --vcf-file /data/variants.vcf.gz \
+    --process 4 \
+    --out /data/results.csv
+```
+
+**Output to stdout (pipe to file or another tool):**
+```bash
+docker run --rm -v /path/to/data:/data bamcol:0.3.2 \
+    /data/sample.bam --pos chr1:1000 > results.csv
+```
+
+**Docker volume mounting notes:**
+- `-v /path/to/data:/data` mounts your local directory to `/data` in the container
+- BAM files, position files, VCF files, and output files must all be in the mounted directory
+- Use `/data/` prefix for all file paths inside the container
 
 ---
 
