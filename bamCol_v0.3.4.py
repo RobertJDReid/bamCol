@@ -581,15 +581,15 @@ def main():
 
         n_written = 0
 
-        if not HAS_TQDM:
-            print(
-                "Note: install tqdm ('pip install tqdm') for a progress bar.",
-                file=sys.stderr,
-            )
+        #if not HAS_TQDM:
+        #    print(
+        #        "Note: install tqdm ('pip install tqdm') for a progress bar.",
+        #        file=sys.stderr,
+        #    )
 
         def make_progress(iterable, total, desc="Positions"):
             """Wrap iterable with tqdm if available, else return as-is."""
-            if HAS_TQDM:
+            if HAS_TQDM and args.out != "-":
                 return tqdm(
                     iterable,
                     total=total,
@@ -606,10 +606,10 @@ def main():
             try:
                 pos_iter = make_progress(positions, total=len(positions))
                 for chrom, pos1 in pos_iter:
-                    if HAS_TQDM:
+                    if HAS_TQDM and args.out != "-":
                         pos_iter.set_postfix(pos=f"{chrom}:{pos1}", records=n_written)
-                    else:
-                        print(f"  processing {chrom}:{pos1} ...", file=sys.stderr)
+                    #else:
+                        #print(f"  processing {chrom}:{pos1} ...", file=sys.stderr)
                     for rec in pileup_one_position(
                         bam=bamf,
                         chrom=chrom,
@@ -658,10 +658,10 @@ def main():
                     total=len(positions),
                 )
                 for (chrom, pos1), records in pos_iter:
-                    if HAS_TQDM:
+                    if HAS_TQDM and args.out != "-":
                         pos_iter.set_postfix(pos=f"{chrom}:{pos1}", records=n_written)
-                    else:
-                        print(f"  done {chrom}:{pos1}", file=sys.stderr)
+                    #else:
+                        #print(f"  done {chrom}:{pos1}", file=sys.stderr)
                     for rec in records:
                         writer.writerow(rec)
                         n_written += 1
