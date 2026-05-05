@@ -1,6 +1,6 @@
 # bamCol.py
 
-_version 0.3.2_
+_version 0.3.4_
 
 ![sequenceRain](images/Align_rain2.png)
 
@@ -220,6 +220,9 @@ An auxiliary R script is included for more stringent SNP pre-filtering than `--v
 ---
 
 ## 🔄 Version History
+
+**v0.3.4** - Added progress bar if user has `tqdm` installed.
+`tqdm` can be installed via homebrew
 
 **v0.3.3** - Added `--adjust-hardclip` to account for hard clipped sequences
 when calculating `read_position` in output. Useful for analyses that use
