@@ -8,8 +8,13 @@ import warnings
 from typing import Iterable, Tuple, List, Optional
 import pysam
 from multiprocessing import Pool
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
 
-__version__ = "0.3.3"
+__version__ = "0.3.5"
 
 def get_hard_clip_offset(aln: pysam.AlignedSegment) -> int:
     """
@@ -468,6 +473,14 @@ def main():
         help="Number of worker processes (default: use all available CPUs).",
     )
     ap.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="Per-position timeout in seconds for worker processes (default: no timeout). "
+             "Useful for identifying positions that cause workers to hang.",
+    )
+    ap.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -517,7 +530,26 @@ def main():
     if not bam_test.has_index():
         bam_test.close()
         ap.error("BAM index (.bai) not found or unreadable. Create with samtools index.")
+
+    bam_contigs = set(bam_test.references)
     bam_test.close()
+
+    # Pre-filter positions: drop any chromosome not present in the BAM header.
+    # This avoids per-position ValueError crashes when the VCF contains contigs
+    # that do not exist in the BAM (e.g. different reference builds or subsets).
+    skipped_chroms = {chrom for chrom, _ in positions if chrom not in bam_contigs}
+    if skipped_chroms:
+        warnings.warn(
+            f"Skipping {len(skipped_chroms)} chromosome(s) not found in BAM header: "
+            + ", ".join(sorted(skipped_chroms))
+        )
+    positions = [(chrom, pos) for chrom, pos in positions if chrom in bam_contigs]
+
+    if not positions:
+        ap.error(
+            "No positions remain after filtering against BAM contigs. "
+            "Check that your VCF/position file uses the same chromosome names as the BAM."
+        )
 
     # Determine number of processes
     cpu_count = os.cpu_count() or 1
@@ -568,11 +600,35 @@ def main():
 
         n_written = 0
 
+        #if not HAS_TQDM:
+        #    print(
+        #        "Note: install tqdm ('pip install tqdm') for a progress bar.",
+        #        file=sys.stderr,
+        #    )
+
+        def make_progress(iterable, total, desc="Positions"):
+            """Wrap iterable with tqdm if available, else return as-is."""
+            if HAS_TQDM and args.out != "-":
+                return tqdm(
+                    iterable,
+                    total=total,
+                    desc=desc,
+                    unit="pos",
+                    file=sys.stderr,
+                    dynamic_ncols=True,
+                )
+            return iterable
+
         # Single-process path: behave like the original code
         if n_proc == 1:
             bamf = pysam.AlignmentFile(args.bam, "rb")
             try:
-                for chrom, pos1 in positions:
+                pos_iter = make_progress(positions, total=len(positions))
+                for chrom, pos1 in pos_iter:
+                    if HAS_TQDM and args.out != "-":
+                        pos_iter.set_postfix(pos=f"{chrom}:{pos1}", records=n_written)
+                    #else:
+                        #print(f"  processing {chrom}:{pos1} ...", file=sys.stderr)
                     for rec in pileup_one_position(
                         bam=bamf,
                         chrom=chrom,
@@ -615,13 +671,22 @@ def main():
 
             # Use imap to preserve order of positions in output
             with Pool(processes=n_proc) as pool:
-                for records in pool.imap(worker_pileup, task_args):
+                imap_iter = pool.imap(worker_pileup, task_args)
+                pos_iter = make_progress(
+                    zip(positions, imap_iter),
+                    total=len(positions),
+                )
+                for (chrom, pos1), records in pos_iter:
+                    if HAS_TQDM and args.out != "-":
+                        pos_iter.set_postfix(pos=f"{chrom}:{pos1}", records=n_written)
+                    #else:
+                        #print(f"  done {chrom}:{pos1}", file=sys.stderr)
                     for rec in records:
                         writer.writerow(rec)
                         n_written += 1
 
         # Tiny summary to stderr
-        print(f"Wrote {n_written} records", file=sys.stderr)
+        print(f"\nWrote {n_written} records", file=sys.stderr)
 
     finally:
         if out_fh is not sys.stdout:

@@ -532,6 +532,18 @@ def main():
         ap.error("BAM index (.bai) not found or unreadable. Create with samtools index.")
     bam_test.close()
 
+    # remove missing positions by comparing to bam file
+    skipped_chroms = {chrom for chrom, _ in positions if chrom not in bam_contigs}
+    if skipped_chroms:
+        warnings.warn(
+            f"Skipping {len(skipped_chroms)} chromosome(s) not found in BAM: "
+            + ", ".join(sorted(skipped_chroms))
+        )
+    positions = [(chrom, pos) for chrom, pos in positions if chrom in bam_contigs]
+
+    if not positions:
+        ap.error("No positions remain after filtering against BAM contigs.")
+
     # Determine number of processes
     cpu_count = os.cpu_count() or 1
     if args.process is None:

@@ -1,6 +1,6 @@
 # bamCol.py
 
-_version 0.3.4_
+_version 0.3.5_
 
 ![sequenceRain](images/Align_rain2.png)
 
