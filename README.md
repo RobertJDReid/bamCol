@@ -6,9 +6,9 @@ _version 0.3.5_
 
 **Extract per-read base calls at specific genomic positions from a BAM file using pysam.**
 
-Given a chromosomal position or positions, `bamCol` extracts base calls from a BAM file of mapped sequence reads. Output is a CSV table listing the read ID, base call, mapping quality, strand, and other information. Positions are automatically divided among available CPU cores for parallel processing.
+Given a chromosomal position or positions, `bamCol` extracts all base calls at those positions from a BAM file of mapped sequence reads. Output is a CSV table listing the read ID, base call, mapping quality, strand, and other information. The input positions list is automatically divided among available CPU cores for parallel processing.
 
-`bamCol` is useful for inspecting allele composition, verifying variant calls, or extracting read-level evidence at specific coordinates. The output can be used to track SNP outcomes along specific reads, providing evidence for strand exchanges or other chromosomal alterations. By default, only primary alignment reads are returned.
+`bamCol` is useful for inspecting allele composition, verifying variant calls, or extracting read-level evidence at specific coordinates. The output can be used to track SNP outcomes along specific reads, providing evidence for strand exchanges or other chromosomal alterations — output CSVs can be loaded directly into [ChimeraMapR](https://github.com/RobertJDReid/ChimeraMapR) to visualize haplotype switches across a chromosome. By default, only primary alignment reads are returned but options for supplementary and secondary alignments are available.
 
 ---
 
