@@ -24,7 +24,7 @@ Given a chromosomal position or positions, `bamCol` extracts all base calls at t
 ### Option 1: Conda (Recommended)
 
 ```bash
-conda create -n bamcol python=3.10 pysam -y
+conda create -n bamcol -c bioconda -c conda-forge python=3.10 pysam -y
 conda activate bamcol
 git clone <repository-url>
 cd bamCol
